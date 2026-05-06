@@ -1,0 +1,9 @@
+# Tests Database
+test_lanmsg.db-shm
+test_lanmsg.db-wal
+
+# extra  (dont need to store for testing phase)
+lanmsg.db
+
+# misc
+__pycache__

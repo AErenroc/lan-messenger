@@ -15,7 +15,11 @@ lan-messenger/
 │   ├── database.py         # SQLite layer managment (users + store-and-forward messages)
 │   └── lanmsg.db           # Created automatically on first run
 │
-└── client/
-    ├── connection.py       # TCP connection, background receive thread, callbacks
-    └── client.py           # Terminal UI, command parser stuff
+├── client/
+│   ├── connection.py       # TCP connection, background receive thread, callbacks
+│   └── client.py           # Terminal UI, command parser stuff
+│
+└── shared/
+    └── protocol.py         # Message types & packet framing (shared by both sides client-server)
+
 ```
