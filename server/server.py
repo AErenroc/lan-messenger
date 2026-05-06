@@ -35,10 +35,8 @@ logging.basicConfig(
 log = logging.getLogger("lanmsg.server")
 
 
-# ---------------------------------------------------------------------------
-# Client session
-# ---------------------------------------------------------------------------
 
+# Client session ------------------------------------------------------------------------------------------------------------
 class ClientSession(threading.Thread):
     """One thread per connected client."""
 
@@ -52,10 +50,9 @@ class ClientSession(threading.Thread):
         self._lock = threading.Lock()
         self._alive = True  # cleared when recv loop ends
 
-    # ------------------------------------------------------------------
-    # Thread entry point
-    # ------------------------------------------------------------------
 
+
+    # Thread entry point ------------------------------------------------------------------------
     def run(self):
         log.info("Connection from %s:%d", *self.addr)
         try:
@@ -69,10 +66,8 @@ class ClientSession(threading.Thread):
         finally:
             self._disconnect()
 
-    # ------------------------------------------------------------------
-    # Network helpers
-    # ------------------------------------------------------------------
-
+  
+    # Network helpers ------------------------------------------------------------------------
     def _recv_packet(self) -> Optional[dict]:
         """Block until a full length-prefixed packet arrives, or return None on EOF."""
         try:
@@ -117,10 +112,8 @@ class ClientSession(threading.Thread):
     def _error(self, info: str):
         self.send({"type": MSG_ERROR, "info": info})
 
-    # ------------------------------------------------------------------
-    # Dispatch
-    # ------------------------------------------------------------------
 
+    # Dispatch -----------------------------------------------------------------
     def _handle(self, pkt: dict):
         t = pkt.get("type")
         if t == MSG_REGISTER:
@@ -140,10 +133,9 @@ class ClientSession(threading.Thread):
         else:
             self._error(f"Unknown message type: {t!r}")
 
-    # ------------------------------------------------------------------
-    # Handlers
-    # ------------------------------------------------------------------
+  
 
+    # Handlers ---------------------------------------------------------------
     def _handle_register(self, pkt: dict):
         username = (pkt.get("username") or "").strip()
         if not username or len(username) > 32:
@@ -261,10 +253,7 @@ class ClientSession(threading.Thread):
         ]
         self.send({"type": MSG_USER_LIST, "users": users})
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
+    # Internal helpers ------------------------------------------------------------
     def _deliver_pending(self):
         if not self.username:
             return
@@ -301,10 +290,8 @@ class ClientSession(threading.Thread):
         self.sock = None  # signal to send() that we're gone
 
 
-# ---------------------------------------------------------------------------
-# Server
-# ---------------------------------------------------------------------------
 
+# Server ---------------------------------------------------------------------------------------------------------------------
 class Server:
     def __init__(self, host: str, port: int):
         self.host = host
@@ -313,10 +300,8 @@ class Server:
         self._sessions: Dict[str, ClientSession] = {}  # username (lower) → session
         self._sessions_lock = threading.Lock()
 
-    # ------------------------------------------------------------------
-    # Session registry
-    # ------------------------------------------------------------------
 
+    # Session registry --------------------------------------------------------
     def add_session(self, username: str, session: ClientSession):
         with self._sessions_lock:
             self._sessions[username.lower()] = session
@@ -348,10 +333,8 @@ class Server:
                 continue
             session.send(pkt)
 
-    # ------------------------------------------------------------------
-    # Main loop
-    # ------------------------------------------------------------------
 
+    # Main loop ----------------------------------------------------------------
     def run(self):
         stats = self.db.stats()
         log.info("Database: %d users, %d messages (%d pending)",
@@ -374,10 +357,7 @@ class Server:
             srv_sock.close()
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
+# Entry point --------------------------------------------------------------------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="LAN Messenger Server")
     parser.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
