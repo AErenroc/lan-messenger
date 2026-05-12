@@ -47,3 +47,11 @@ lan-messenger/
     └── protocol.py         # Message types & packet framing (shared by both sides client-server)
 
 ```
+
+## Optional: Prettier Output with `rich`
+
+```bash
+pip install rich
+```
+
+The client auto-detects `rich` and uses coloured output, tables, and panels if available. Falls back to plain text otherwise. Not a requirement.
