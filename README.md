@@ -1,5 +1,29 @@
 # lan-messenger
 
+A store-and-forward messaging system for local networks, written in Python with SQLite persistence.
+
+## Features
+- **Store-and-forward** — messages sent to offline users are stored in the database and delivered automatically when they reconnect
+- **Real-time delivery** — messages to online users are pushed instantly over open TCP sockets
+- **Broadcast messages** — send to all online users at once or message is stored for anyone currently offline
+- **User registry** — persistent user accounts in SQLite (todo: add password system)
+- **On/Offline notifications** — clients are notified when users join or leave the network
+- **User list** — see who's registered and who's currently online
+- **No dependencies** — pure Python stdlib (optional `rich` for a prettier terminal UI)
+
+## Commands
+| Command | Alias |  Description |
+| -------- | -------- | -------- |
+| `/register <name>` | | Create a new account |
+| `/login <name>` | | Log in (fetches pending messages automatically) |
+| `/logout` | | Log out without disconnecting |
+| `/msg <user> <text>` | `@<user> <text>` | Send a direct message |
+| `/broadcast <text>` | `/bc`, `/all` | Send to all online users |
+| `/fetch` | `/inbox` | Manually pull pending messages |
+| `/users` | `/who`, `/list` | Show all users + online status |
+| `/help` | | Show help |
+| `/quit` | `/exit`, `/q` | Disconnect and exit |
+
 
 ## Project Structure
 
