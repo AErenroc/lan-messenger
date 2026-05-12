@@ -9,7 +9,7 @@ A store-and-forward messaging system for local networks, written in Python with 
 - **User registry** — persistent user accounts in SQLite (todo: add password system)
 - **On/Offline notifications** — clients are notified when users join or leave the network
 - **User list** — see who's registered and who's currently online
-- **No dependencies** — pure Python stdlib (optional `rich` for a prettier terminal UI)
+
 
 ## Commands
 | Command | Alias |  Description |
