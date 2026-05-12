@@ -1,5 +1,7 @@
 """
 LAN Messenger - - - Tests!
+
+TODO: make sure all tests work then move to adding encryption. - then add more tests
 """
 
 import sys
@@ -13,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from server.server import Server
 from server.database import Database
 from client.connection import Connection
-from shared.protocol import DEFAULT_PORT, MSG_OK, MSG_ERROR, MSG_DELIVER, MSG_USER_LIST, MSG_NOTIFY
+from shared.protocol import MSG_OK, MSG_ERROR, MSG_DELIVER, MSG_USER_LIST, MSG_NOTIFY
 
 TEST_PORT = 54399
 TEST_DB   = Path(__file__).parent / "server" / "test_lanmsg.db"
