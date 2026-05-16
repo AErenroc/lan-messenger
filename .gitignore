@@ -7,3 +7,5 @@ lanmsg.db
 
 # misc
 __pycache__
+.DS_Store
+

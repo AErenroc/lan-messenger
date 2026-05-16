@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Dict, Optional
 import sys
 
+import ssl
+
 # Allow running from project root or server/ directory
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
