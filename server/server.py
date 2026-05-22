@@ -27,6 +27,7 @@ from shared.protocol import (
     MSG_FETCH, MSG_LIST_USERS,
     MSG_OK, MSG_ERROR, MSG_DELIVER, MSG_USER_LIST, MSG_NOTIFY,
 )
+from shared.tls import server_ssl_context, cert_fingerprint, CERT_PATH
 from server.database import Database
 
 logging.basicConfig(
@@ -341,23 +342,38 @@ class Server:
         stats = self.db.stats()
         log.info("Database: %d users, %d messages (%d pending)",
                  stats["total_users"], stats["total_messages"], stats["pending_messages"])
+        
+        # Set up TLS
+        print("\n\t Set up TLS CALLING --> ssl_ctx = server_ssl_context(self.host)\n")
+        ssl_ctx = server_ssl_context(self.host)
+        log.info("TLS enabled  (%s)", ssl_ctx.protocol.name if hasattr(ssl_ctx.protocol, 'name') else 'TLS')
+        log.info("Cert fingerprint (SHA-256): %s", cert_fingerprint(CERT_PATH))
+        log.info("Share server/server.crt with clients for certificate pinning.")
 
-        srv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        srv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        srv_sock.bind((self.host, self.port))
-        srv_sock.listen(64)
-        log.info("LAN Messenger server listening on %s:%d", self.host, self.port)
+
+
+        raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        raw_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        raw_sock.bind((self.host, self.port))
+        raw_sock.listen(64)
+        log.info("LAN Messenger server listening on %s:%d (TLS)", self.host, self.port)
 
         try:
             while True:
-                client_sock, addr = srv_sock.accept()
-                session = ClientSession(client_sock, addr, self)
+                client_raw, addr = raw_sock.accept()
+                # Perform TLS handshake before spawning the session thread
+                try:
+                    client_tls = ssl_ctx.wrap_socket(client_raw, server_side=True)
+                except ssl.SSLError as exc:
+                    log.warning("TLS handshake failed from %s:%d — %s", *addr, exc)
+                    client_raw.close()
+                    continue
+                session = ClientSession(client_tls, addr, self)
                 session.start()
         except KeyboardInterrupt:
             log.info("Server shutting down.")
         finally:
-            srv_sock.close()
-
+            raw_sock.close()
 
 # Entry point --------------------------------------------------------------------------------------------------------------------------------------
 def main():

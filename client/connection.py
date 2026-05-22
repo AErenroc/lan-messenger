@@ -9,7 +9,7 @@ Manages
     - Receiving messages in the background 
     - Dispatching messages to registered callbacks
 """
-
+import ssl
 import socket
 import threading
 from pathlib import Path
@@ -23,6 +23,7 @@ from shared.protocol import (
     MSG_REGISTER, MSG_LOGIN, MSG_LOGOUT, MSG_SEND, MSG_BROADCAST,
     MSG_FETCH, MSG_LIST_USERS,
 )
+from shared.tls import client_ssl_context
 
 
 class Connection:
@@ -32,11 +33,27 @@ class Connection:
     Register callbacks via --> on(self, msg_type: str, callback: Callable[[dict], None]):
     Callbacks are called from the receiver thread, so they should be
     short or hand off work to the UI thread.
+
+    Parameters
+    ----------
+    host : str
+        Server IP or hostname.
+    port : int
+        Server port.
+    cert_path : Path or None
+        Path to the server's PEM certificate for pinned verification.
+        Pass None to use the system CA bundle.
+    verify : bool
+        Set False to skip certificate verification (testing / fully-trusted
+        LAN only).  Default is True.
     """
 
-    def __init__(self, host: str, port: int = DEFAULT_PORT):
+    def __init__(self, host: str, port: int = DEFAULT_PORT, cert_path: Optional[Path] = None, verify: bool = True):
         self.host = host
         self.port = port
+        self._cert_path = cert_path
+        self._verify = verify
+
         self._sock: Optional[socket.socket] = None
         self._send_lock = threading.Lock()                   # ensure thread-safe sending TODO: check if plan works
         self._callbacks: Dict[str, list[Callable]] = {}      
@@ -44,10 +61,8 @@ class Connection:
         self._recv_thread: Optional[threading.Thread] = None # background recive thread
         self.connected = False
 
-    # ------------------------------------------------------------------
-    # Callback registration
-    # ------------------------------------------------------------------
-
+    
+    # Callback registration ------------------------------------------------------
     def on(self, msg_type: str, callback: Callable[[dict], None]):
         """Register a callback for a specific message type."""
         self._callbacks.setdefault(msg_type, []).append(callback)
@@ -57,13 +72,15 @@ class Connection:
         self._disconnect_cb = callback
         return self
     
-    # ------------------------------------------------------------------
-    # Connection Lifecycle
-    # ------------------------------------------------------------------
-
+  
+    # Connection Lifecycle ------------------------------------------------------------
     def connect(self, timeout: float = 5.0):
-        """Connect to the server. Raises OSError on failure."""
-        self._sock = socket.create_connection((self.host, self.port), timeout=timeout)
+        """Connect to the server and complete the TLS handshake. Raises OSError on failure."""
+        ssl_ctx = client_ssl_context(cert_path=self._cert_path, verify=self._verify)
+        raw_sock = socket.create_connection((self.host, self.port), timeout=timeout)
+        # Wrap with TLS - - server_hostname=None because we use cert pinning,
+        # not hostname verification (self-signed cert on a LAN).
+        self._sock = ssl_ctx.wrap_socket(raw_sock, server_hostname=self.host)
         self._sock.settimeout(None)  # blocking after connect to wait for revc
         self.connected = True
         self._recv_thread = threading.Thread(target=self._recv_loop, daemon=True)
@@ -82,10 +99,8 @@ class Connection:
                 pass
             self._sock = None
 
-    # ------------------------------------------------------------------
-    # Sending helpers
-    # ------------------------------------------------------------------
-
+   
+    # Sending helpers ----------------------------------------------------------
     def _send(self, payload: dict):
         with self._send_lock:
             if not self._sock:
@@ -113,10 +128,8 @@ class Connection:
     def list_users(self):
         self._send({"type": MSG_LIST_USERS})
 
-    # ------------------------------------------------------------------
-    # Receiver loop (background thread)
-    # ------------------------------------------------------------------
 
+    # Receiver loop (background thread) --------------------------------------------------------
     def _recv_loop(self):
         try:
             while self.connected:
@@ -158,6 +171,4 @@ class Connection:
                 cb(pkt)
             except Exception as exc:
                 print(f"[client] callback error for {msg_type}: {exc}")
-
-
 

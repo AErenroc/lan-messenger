@@ -2,8 +2,10 @@
 test_lanmsg.db-shm
 test_lanmsg.db-wal
 
-# extra  (dont need to store for testing phase)
+#db and certs
 lanmsg.db
+server.crt
+server.key
 
 # misc
 __pycache__

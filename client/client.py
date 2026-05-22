@@ -1,5 +1,5 @@
 """
-LAN Messenger – Terminal Client (TUI)
+LAN Messenger – - - Terminal Client (TUI)
 A polished terminal interface built with only the stdlib + optional 'rich'.
 
 Usage:
@@ -86,12 +86,13 @@ def _print_notify(event: str, username: str):
 
 
 
+
 # Main client class ------------------------------------------------
 class MessengerClient:
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int, cert_path=None, verify: bool = True):
         self.host = host
         self.port = port
-        self.conn = Connection(host, port)
+        self.conn = Connection(host, port, cert_path=cert_path, verify=verify)
         self.username: Optional[str] = None
         self._running = True
         self._input_q: queue.Queue[str] = queue.Queue()
@@ -281,9 +282,25 @@ def main():
     parser = argparse.ArgumentParser(description="LAN Messenger Client")
     parser.add_argument("--host", default="127.0.0.1", help="Server IP address")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Server port (default: {DEFAULT_PORT})")
+
+    tls_group = parser.add_argument_group("TLS / encryption")
+    tls_group.add_argument(
+        "--cert", default=None, metavar="PATH",
+        help="Path to server's PEM certificate for pinned verification "
+             "(e.g. server/server.crt). Recommended for security.",
+    )
+
+    tls_group.add_argument(
+        "--no-verify", action="store_true",
+        help="Skip TLS certificate verification (NOT recommended; for testing only).",
+    )
+
     args = parser.parse_args()
 
-    client = MessengerClient(args.host, args.port)
+    cert_path = Path(args.cert) if args.cert else None
+    verify    = not args.no_verify
+
+    client = MessengerClient(args.host, args.port, cert_path=cert_path, verify=verify)
     client.run()
 
 
