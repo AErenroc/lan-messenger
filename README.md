@@ -1,6 +1,12 @@
 # lan-messenger
 
-A store-and-forward messaging system for local networks, written in Python with SQLite persistence.
+A store-and-forward messaging system for local networks, written in Python with SQLite persistence. Traffic is encrypted with TLS. The server generates a self-signed certificate on first run, clients verify it by fingerprint or by pinning the certificate file directly.
+
+## Requirements
+- Python 3.8 or later
+- OpenSSL installed (used for certificate generation)
+- Optional: pip install rich for colored terminal output
+
 
 ## Features
 - **Store-and-forward** — messages sent to offline users are stored in the database and delivered automatically when they reconnect
@@ -10,6 +16,27 @@ A store-and-forward messaging system for local networks, written in Python with 
 - **On/Offline notifications** — clients are notified when users join or leave the network
 - **User list** — see who's registered and who's currently online
 
+## Command-line flags
+
+### Server
+
+```
+python run_server.py [--host HOST] [--port PORT]
+
+  --host HOST    Address to listen on. Default: 127.0.0.1
+  --port PORT    Port number. Default: 54321
+```
+
+### Client
+
+```
+python run_client.py [--host HOST] [--port PORT] [--cert PATH] [--no-verify]
+
+  --host HOST    Server IP address. Default: 127.0.0.1
+  --port PORT    Server port. Default: 54321
+  --cert PATH    Path to server.crt for certificate pinning
+  --no-verify    Skip TLS certificate verification (insecure, testing only)
+```
 
 ## Commands
 | Command | Alias |  Description |
@@ -44,7 +71,8 @@ lan-messenger/
 │   └── client.py           # Terminal UI, command parser stuff
 │
 └── shared/
-    └── protocol.py         # Message types & packet framing (shared by both sides client-server)
+    ├── protocol.py         # Message types & packet framing (shared by both sides client-server)
+    └── tls.py              # SSL context, cert generation
 
 ```
 
