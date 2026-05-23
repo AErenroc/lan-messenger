@@ -78,8 +78,7 @@ class Connection:
         """Connect to the server and complete the TLS handshake. Raises OSError on failure."""
         ssl_ctx = client_ssl_context(cert_path=self._cert_path, verify=self._verify)
         raw_sock = socket.create_connection((self.host, self.port), timeout=timeout)
-        # Wrap with TLS - - server_hostname=None because we use cert pinning,
-        # not hostname verification (self-signed cert on a LAN).
+        # Wrap with TLS
         self._sock = ssl_ctx.wrap_socket(raw_sock, server_hostname=self.host)
         self._sock.settimeout(None)  # blocking after connect to wait for revc
         self.connected = True
