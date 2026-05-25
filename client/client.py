@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from client.connection import Connection
 from shared.protocol import (
-    DEFAULT_PORT,
+    DEFAULT_PORT, MAX_PACKET,
     MSG_OK, MSG_ERROR, MSG_DELIVER, MSG_USER_LIST, MSG_NOTIFY,
 )
 

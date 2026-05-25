@@ -19,7 +19,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from shared.protocol import (
-    DEFAULT_PORT, HEADER_SIZE, decode_header, decode_body, encode,
+    DEFAULT_PORT, MAX_PACKET, HEADER_SIZE, decode_header, decode_body, encode,
     MSG_REGISTER, MSG_LOGIN, MSG_LOGOUT, MSG_SEND, MSG_BROADCAST,
     MSG_FETCH, MSG_LIST_USERS,
 )

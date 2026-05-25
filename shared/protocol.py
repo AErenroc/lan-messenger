@@ -11,6 +11,9 @@ import struct
 HEADER_FMT = "<I"
 HEADER_SIZE = struct.calcsize(HEADER_FMT)
 
+# Max packet size
+MAX_PACKET = 65536  # 64KB 
+
 # Server default port
 DEFAULT_PORT = 54321
 

@@ -58,9 +58,12 @@ class Database:
         conn = self._conn()
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS users (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                username    TEXT    NOT NULL UNIQUE COLLATE NOCASE,
-                created_at  TEXT    NOT NULL DEFAULT (datetime('now','utc'))
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                username        TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+                password_salt   TEXT    NOT NULL,
+                password_hash   TEXT    NOT NULL,
+                cert_subject    TEXT,
+                created_at      TEXT    NOT NULL DEFAULT (datetime('now','utc'))
             );
 
             CREATE TABLE IF NOT EXISTS messages (

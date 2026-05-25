@@ -21,8 +21,10 @@ import ssl
 # Allow running from project root or server/ directory
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+
+
 from shared.protocol import (
-    DEFAULT_PORT, HEADER_SIZE, decode_header, decode_body, encode,
+    DEFAULT_PORT, MAX_PACKET, HEADER_SIZE, decode_header, decode_body, encode,
     MSG_REGISTER, MSG_LOGIN, MSG_LOGOUT, MSG_SEND, MSG_BROADCAST,
     MSG_FETCH, MSG_LIST_USERS,
     MSG_OK, MSG_ERROR, MSG_DELIVER, MSG_USER_LIST, MSG_NOTIFY,
@@ -377,6 +379,7 @@ class Server:
 
 # Entry point --------------------------------------------------------------------------------------------------------------------------------------
 def main():
+    
     parser = argparse.ArgumentParser(description="LAN Messenger Server")
     parser.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Port (default: {DEFAULT_PORT})")
