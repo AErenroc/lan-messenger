@@ -11,11 +11,12 @@ If 'rich' is not installed, falls back to plain text.
 import argparse
 import queue
 import sys
-import threading
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+import getpass # for masking user input as it is typed
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -231,37 +232,45 @@ Shorthand while logged in:
         parts = line[1:].split(" ", 2)
         cmd = parts[0].lower()
 
-        if cmd == "help":
+        if cmd == "help":                                   # HELP 
             self._print_help()
-        elif cmd == "register":
+        elif cmd == "register":                             # REGISTER - - - - - - - - - - - - 
             if len(parts) < 2:
                 _print_error("Usage: /register <username>")
             else:
-                self.conn.register(parts[1])
-        elif cmd == "login":
+                password = getpass.getpass("Choose a password: ")
+                confirm  = getpass.getpass("Confirm password:  ")
+                if password != confirm:
+                    _print_error("Passwords do not match!")
+                elif len(password) < 8:
+                    _print_error("Password must be at least 8 characters")
+                else:
+                    self.conn.register(parts[1], password)
+        elif cmd == "login":                                # LOGIN - - - - - - - - - - - - - -
             if len(parts) < 2:
                 _print_error("Usage: /login <username>")
             else:
+                password = getpass.getpass("Password: ")
                 self.username = parts[1]
-                self.conn.login(parts[1])
-        elif cmd == "logout":
+                self.conn.login(parts[1], password)
+        elif cmd == "logout":                               # LOGOUT
             self.conn.logout()
             self.username = None
-        elif cmd in ("msg", "message", "send"):
+        elif cmd in ("msg", "message", "send"):             # MSG/MESSAGE/SEND
             if len(parts) < 3:
                 _print_error("Usage: /msg <user> <message>")
             else:
                 self._cmd_msg(parts[1], parts[2])
-        elif cmd in ("broadcast", "bc", "all"):
+        elif cmd in ("broadcast", "bc", "all"):             # BROADCAST / BC / ALL
             if len(parts) < 2:
                 _print_error("Usage: /broadcast <message>")
             else:
                 self.conn.broadcast(" ".join(parts[1:]))
-        elif cmd in ("fetch", "inbox"):
+        elif cmd in ("fetch", "inbox"):                     # FETCH / INBOX
             self.conn.fetch()
-        elif cmd in ("users", "list", "who"):
+        elif cmd in ("users", "list", "who"):               # USERS / LIST / WHO
             self.conn.list_users()
-        elif cmd in ("quit", "exit", "q"):
+        elif cmd in ("quit", "exit", "q"):                  # QUIT / EXIT / Q
             self._running = False
         else:
             _print_error(f"Unknown command '/{cmd}'. Type /help.")

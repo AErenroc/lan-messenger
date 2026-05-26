@@ -148,7 +148,7 @@ def server_ssl_context(host_addr: str = "127.0.0.1", cert_path: Path = CERT_PATH
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.minimum_version = _MIN_TLS
     ctx.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
-    # Disable insecure cipher suites bc of parinoia
+    # Disable insecure cipher suites bc of paranoia
     ctx.set_ciphers("HIGH:!aNULL:!eNULL:!MD5:!RC4:!3DES")
     return ctx
 
@@ -181,7 +181,7 @@ def client_ssl_context( cert_path: Optional[Path] = None, verify: bool = True) -
         # Pin to the server's specific self-signed cert
         ctx.load_verify_locations(cafile=str(cert_path))
         ctx.verify_mode = ssl.CERT_REQUIRED
-        ctx.check_hostname = True              #TODO: fix SAN stuff, check_hostname
+        ctx.check_hostname = True              
     else:
        print("\n[!] ~~~~~~~~~~~~~ cert_path not found ~~~~~~~~~~~~~\n Closing...\n")
        sys.exit()

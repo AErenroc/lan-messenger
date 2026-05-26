@@ -23,6 +23,7 @@ import threading
 from pathlib import Path
 from typing import List, Optional
 
+from shared.authentication import hash_password, verify_password
 
 DB_PATH = Path(__file__).parent / "lanmsg.db"
 
@@ -82,23 +83,38 @@ class Database:
 
    
     # User operations --------------------------------------------------------------------------
-    def user_exists(self, username: str) -> bool: # TODO: check prepared statements avoid SQL injection 
+    def user_exists(self, username: str) -> bool: 
         row = self._conn().execute(
             "SELECT 1 FROM users WHERE username = ? COLLATE NOCASE", (username,)
         ).fetchone()
         return row is not None
 
-    def register_user(self, username: str) -> bool:
-        """Return True if created, False if already exists."""
+    def register_user(self, username: str, password_salt: str, password_hash: str) -> bool:
+        """Return True if created, False if username already exists."""
         if self.user_exists(username):
             return False
-        self._execute("INSERT INTO users (username) VALUES (?)", (username,))
+        self._execute("INSERT INTO users (username, password_salt, password_hash) VALUES (?, ?, ?)", 
+                      (username, password_salt, password_hash)) # Parameterized statment works
         return True
+    
+    def verify_user(self, username: str, password: str) -> bool:
+         """
+         Return True if username exists and password is correct. 
+         Uses constant-time comparison with hmac.compare_digest :D (inside authentication.py --> verify_password).
+         TODO: Add explanation of constant-time comparison to README/features
+         """
+         row = self._conn().execute("SELECT password_salt, password_hash FROM users WHERE username = ? COLLATE NOCASE",
+                                    (username,),).fetchone()
+         if row is None:
+            # User doesn't exist, run a dummy hash to avoid timing-based --> user enumeration (attacker should'nt be able to tell "wrong user" from "wrong password")
+            hash_password("dummy-timing-guard") #TODO: check/test if this is sufficient 
+            return False
+         
+         return verify_password(password, row["password_salt"], row["password_hash"])
+
 
     def list_users(self) -> List[str]:
-        rows = self._conn().execute(
-            "SELECT username FROM users ORDER BY username COLLATE NOCASE"
-        ).fetchall()
+        rows = self._conn().execute("SELECT username FROM users ORDER BY username COLLATE NOCASE").fetchall()
         return [r["username"] for r in rows]
 
 

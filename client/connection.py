@@ -106,11 +106,11 @@ class Connection:
                 raise OSError("Not connected")
             self._sock.sendall(encode(payload))     # continues to transmit data to server until entire buffer sent or error occures
 
-    def register(self, username: str):
-        self._send({"type": MSG_REGISTER, "username": username})
+    def register(self, username: str, password: str):
+        self._send({"type": MSG_REGISTER, "username": username, "password": password})
 
-    def login(self, username: str):
-        self._send({"type": MSG_LOGIN, "username": username})
+    def login(self, username: str, password: str):
+        self._send({"type": MSG_LOGIN, "username": username, "password": password})
 
     def logout(self):
         self._send({"type": MSG_LOGOUT})

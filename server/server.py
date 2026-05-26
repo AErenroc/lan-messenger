@@ -21,7 +21,7 @@ import ssl
 # Allow running from project root or server/ directory
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-
+from server.database import Database
 
 from shared.protocol import (
     DEFAULT_PORT, MAX_PACKET, HEADER_SIZE, decode_header, decode_body, encode,
@@ -30,7 +30,9 @@ from shared.protocol import (
     MSG_OK, MSG_ERROR, MSG_DELIVER, MSG_USER_LIST, MSG_NOTIFY,
 )
 from shared.tls import server_ssl_context, cert_fingerprint, CERT_PATH
-from server.database import Database
+from shared.authentication import hash_password
+
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -143,24 +145,39 @@ class ClientSession(threading.Thread):
     # Handlers ---------------------------------------------------------------
     def _handle_register(self, pkt: dict):
         username = (pkt.get("username") or "").strip()
+        password = pkt.get("password") or ""
+
         if not username or len(username) > 32:
             return self._error("Username must be 1-32 characters.")
         if not username.replace("_", "").replace("-", "").isalnum():
             return self._error("Username may only contain letters, digits, - and _.")
-        if self.db.register_user(username):
+        if len(password) < 8:   # TODO: let modify min password length for connecting clients on startup
+            return self._error("Password must be at least 8 characters.")
+        
+        salt_hex, hash_hex = hash_password(password)
+
+        if self.db.register_user(username, salt_hex, hash_hex):
             log.info("Registered new user: %s", username)
             self._ok(f"User '{username}' registered successfully.")
         else:
             self._error(f"Username '{username}' is already taken.")
 
+
     def _handle_login(self, pkt: dict):
         username = (pkt.get("username") or "").strip()
+        password = pkt.get("password") or ""
+
         if not username:
             return self._error("Username required.")
-        if not self.db.user_exists(username):
+        
+        # verify_user() handles both 'user not found' and 'wrong password'
+        if not self.db.verify_user(username, password):
+            log.warning("Failed login attempt for '%s' from %s:%d", username, *self.addr)
             return self._error(f"Unknown user '{username}'. Register first.")
+        
         if self.server.is_online(username):
             return self._error(f"'{username}' is already logged in from another client.")
+
         self.username = username
         self.server.add_session(username, self)
         log.info("%s logged in from %s:%d", username, *self.addr)
@@ -168,6 +185,7 @@ class ClientSession(threading.Thread):
         self.server.broadcast_notify("joined", username, exclude=username)
         # Deliver any stored messages immediately
         self._deliver_pending()
+
 
     def _handle_logout(self):
         if self.username:
