@@ -1,19 +1,19 @@
 # lan-messenger
 
-A store-and-forward messaging system for local networks, written in Python with SQLite persistence. Traffic is encrypted with TLS. The server generates a self-signed certificate on first run, clients verify it by fingerprint or by pinning the certificate file directly.
+A store-and-forward messaging system for local networks, written in Python with SQLite persistence and password authentication. Traffic is encrypted with TLS. The server generates a self-signed certificate on first run, clients verify it by fingerprint or by pinning the certificate file directly.
 
 ## Requirements
 - Python 3.8 or later
-- OpenSSL installed (used for certificate generation)
+- OpenSSL
 - Optional: pip install rich for colored terminal output
 
 
 ## Features
 - **Store-and-forward** — messages sent to offline users are stored in the database and delivered automatically when they reconnect
-- **Password login** verifys a user's identity using a secret password, stored as a salted hash
+- **Password login** -- verifys a user's identity using a chosen password, stored as a salted hash
 - **Real-time delivery** — messages to online users are pushed instantly over open TCP sockets
 - **Broadcast messages** — send to all online users at once or message is stored for anyone currently offline
-- **User registry** — persistent user accounts in SQLite (todo: add password system)
+- **User registry** — persistent user accounts in SQLite
 - **On/Offline notifications** — clients are notified when users join or leave the network
 - **User list** — see who's registered and who's currently online
 
