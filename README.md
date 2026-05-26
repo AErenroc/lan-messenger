@@ -10,6 +10,7 @@ A store-and-forward messaging system for local networks, written in Python with 
 
 ## Features
 - **Store-and-forward** — messages sent to offline users are stored in the database and delivered automatically when they reconnect
+- **Password login** verifys a user's identity using a secret password, stored as a salted hash
 - **Real-time delivery** — messages to online users are pushed instantly over open TCP sockets
 - **Broadcast messages** — send to all online users at once or message is stored for anyone currently offline
 - **User registry** — persistent user accounts in SQLite (todo: add password system)
@@ -72,6 +73,7 @@ lan-messenger/
 │
 └── shared/
     ├── protocol.py         # Message types & packet framing (shared by both sides client-server)
+    ├── authentication.py   # Password salting and hashing, verification
     └── tls.py              # SSL context, cert generation
 
 ```
