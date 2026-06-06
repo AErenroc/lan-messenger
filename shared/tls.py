@@ -16,14 +16,25 @@ from typing import Optional
 
 log = logging.getLogger("lan-messanger.tls")
 
-# Paths (relative to the server/ package directory)
-_SERVER_DIR = Path(__file__).resolve().parent.parent / "server"
+# Paths ---------------------------------------------------------
+_ROOT_DIR = Path(__file__).resolve().parent.parent
+_SERVER_DIR =  _ROOT_DIR / "server"
+_CLIENT_DIR =  _ROOT_DIR / "client"
+
+# CA and Certificate paths 
+CA_CERT_PATH =  _SERVER_DIR / "ca.crt"
+CA_KEY_PATH = _SERVER_DIR / "ca.key"
+
 CERT_PATH = _SERVER_DIR / "server.crt"
 KEY_PATH  = _SERVER_DIR / "server.key"
 
-# TLS minimum version
-_MIN_TLS = ssl.TLSVersion.TLSv1_2 # 771 --> 0x0303: "TLS_1_2"
+CLIENT_CERT_DIR = _CLIENT_DIR / 'certs'     # Contains <username>.crt/.key 
+# ----------------------------------------------------------------
 
+# TLS minimum version ----------------------------------------------
+_MIN_TLS = ssl.TLSVersion.TLSv1_2 # 771 --> 0x0303: "TLS_1_2"
+_CIPHERS = "HIGH:!aNULL:!eNULL:!MD5:!RC4:!3DES"
+_CERT_DAYS = 365
 
 
 # Certificate generation, server-side/ one-time ----------------------------------------------------------------------------
@@ -102,7 +113,7 @@ DNS.2={hostname}
 
 
 
-def generate_self_signed_cert(host_addr: str, cert_path: Path = CERT_PATH, key_path: Path  = KEY_PATH, days: int = 365, cn: str = "lanmsg-server") -> None:
+def generate_self_signed_cert(host_addr: str, cert_path: Path = CERT_PATH, key_path: Path  = KEY_PATH, days: int = _CERT_DAYS, cn: str = "lanmsg-server") -> None:
     """
     Generate a self-signed RSA-2048 / SHA-256 certificate using openssl.
     """
@@ -149,7 +160,7 @@ def server_ssl_context(host_addr: str = "127.0.0.1", cert_path: Path = CERT_PATH
     ctx.minimum_version = _MIN_TLS
     ctx.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     # Disable insecure cipher suites bc of paranoia
-    ctx.set_ciphers("HIGH:!aNULL:!eNULL:!MD5:!RC4:!3DES")
+    ctx.set_ciphers(_CIPHERS)
     return ctx
 
 
@@ -168,7 +179,7 @@ def client_ssl_context( cert_path: Optional[Path] = None, verify: bool = True) -
     """
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.minimum_version = _MIN_TLS
-    ctx.set_ciphers("HIGH:!aNULL:!eNULL:!MD5:!RC4:!3DES")
+    ctx.set_ciphers(_CIPHERS)
 
     # TODO: remove verify check and always use cert after testing
     if not verify:

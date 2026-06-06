@@ -11,3 +11,5 @@ server.key
 __pycache__
 .DS_Store
 
+# todo remove once CA + cert gen is added to tls.py
+scripts
