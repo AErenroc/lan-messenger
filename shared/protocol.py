@@ -18,20 +18,21 @@ MAX_PACKET = 65536  # 64KB
 DEFAULT_PORT = 54321
 
 # --- Message Types (client --> server) ---
-MSG_REGISTER   = "REGISTER"    # {"type": "REGISTER",   "username": str}
-MSG_LOGIN      = "LOGIN"       # {"type": "LOGIN",      "username": str}
-MSG_LOGOUT     = "LOGOUT"      # {"type": "LOGOUT"}
-MSG_SEND       = "SEND"        # {"type": "SEND",       "to": str, "body": str}
-MSG_BROADCAST  = "BROADCAST"   # {"type": "BROADCAST",  "body": str}
-MSG_FETCH      = "FETCH"       # {"type": "FETCH"}       – request pending messages from database
-MSG_LIST_USERS = "LIST_USERS"  # {"type": "LIST_USERS"}
+MSG_REGISTER    = "REGISTER"    # {"type": "REGISTER",   "username": str}
+MSG_LOGIN       = "LOGIN"       # {"type": "LOGIN",      "username": str}
+MSG_LOGOUT      = "LOGOUT"      # {"type": "LOGOUT"}
+MSG_SEND        = "SEND"        # {"type": "SEND",       "to": str, "body": str}
+MSG_BROADCAST   = "BROADCAST"   # {"type": "BROADCAST",  "body": str}
+MSG_FETCH       = "FETCH"       # {"type": "FETCH"}       – request pending messages from database
+MSG_LIST_USERS  = "LIST_USERS"  # {"type": "LIST_USERS"}
+MSG_PASSWD      = "PASSWD"      # {"type": "PASSWD", "old": str, "new" : str}
 
 # --- Message Types (server --> client) ---
-MSG_OK         = "OK"          # {"type": "OK",         "info": str}
-MSG_ERROR      = "ERROR"       # {"type": "ERROR",      "info": str}
-MSG_DELIVER    = "DELIVER"     # {"type": "DELIVER",    "id": int, "from": str, "body": str, "sent_at": str, "broadcast": bool}
-MSG_USER_LIST  = "USER_LIST"   # {"type": "USER_LIST",  "users": [{"username": str, "online": bool}]}
-MSG_NOTIFY     = "NOTIFY"      # {"type": "NOTIFY",     "event": str, "username": str}  – user joined/left
+MSG_OK          = "OK"          # {"type": "OK",         "info": str}
+MSG_ERROR       = "ERROR"       # {"type": "ERROR",      "info": str}
+MSG_DELIVER     = "DELIVER"     # {"type": "DELIVER",    "id": int, "from": str, "body": str, "sent_at": str, "broadcast": bool}
+MSG_USER_LIST   = "USER_LIST"   # {"type": "USER_LIST",  "users": [{"username": str, "online": bool}]}
+MSG_NOTIFY      = "NOTIFY"      # {"type": "NOTIFY",     "event": str, "username": str}  – user joined/left
 
 
 def encode(payload: dict) -> bytes:

@@ -95,6 +95,7 @@ class MessengerClient:
         self.port = port
         self.conn = Connection(host, port, cert_path=cert_path, verify=verify)
         self.username: Optional[str] = None
+        self._pending_login: Optional[str] = None
         self._running = True
         self._input_q: queue.Queue[str] = queue.Queue()
 
@@ -112,8 +113,19 @@ class MessengerClient:
         if pkt.get("info"):
             _print_ok(pkt["info"])
 
+        # Promote the pending login to confirmed only when server says OK
+        if self._pending_login is not None:
+            self.username = self._pending_login
+            self._pending_login = None
+
     def _on_error(self, pkt: dict):
         _print_error(pkt.get("info", "Unknown error"))
+
+        if self._pending_login is not None:
+            _print_info(f"Login as '{self._pending_login}' was not accepted.")
+            self._pending_login = None
+            # self.username is left unchanged
+
 
     def _on_deliver(self, pkt: dict):
         _print_msg(
@@ -168,6 +180,7 @@ class MessengerClient:
 Commands:
   /register <name>        Register a new username
   /login <name>           Log in as an existing user
+  /passwd                 Change your password (must be loged in)
   /logout                 Log out (stay connected)
   /msg <user> <text>      Send a direct message
   /broadcast <text>       Send to all online users
@@ -251,8 +264,9 @@ Shorthand while logged in:
                 _print_error("Usage: /login <username>")
             else:
                 password = getpass.getpass("Password: ")
-                self.username = parts[1]
+                self._pending_login = parts[1]      # Need to wait for server ok before setting self.username
                 self.conn.login(parts[1], password)
+                
         elif cmd == "logout":                               # LOGOUT
             self.conn.logout()
             self.username = None
@@ -270,6 +284,21 @@ Shorthand while logged in:
             self.conn.fetch()
         elif cmd in ("users", "list", "who"):               # USERS / LIST / WHO
             self.conn.list_users()
+        elif cmd == "passwd":
+            if not self.username:
+                _print_error("You must /login first.")
+            else:
+                old_pw = getpass.getpass("Current password : ")
+                new_pw = getpass.getpass("New password     : ")
+                confirm = getpass.getpass("Confirm new      : ")
+
+                # Having checks here is faster then sending to server but also need to check on server side for security. review usefulness.
+                if new_pw != confirm:
+                    _print_error("Passwords do not match.")
+                elif len(new_pw) < 8:   
+                    _print_error("New password must be at least 8 characters.")
+                else:
+                    self.conn.change_password(old_pw, new_pw)
         elif cmd in ("quit", "exit", "q"):                  # QUIT / EXIT / Q
             self._running = False
         else:

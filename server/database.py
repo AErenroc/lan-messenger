@@ -29,7 +29,9 @@ DB_PATH = Path(__file__).parent / "lanmsg.db"
 
 
 class Database:
-    """Thread-safe SQLite wrapper for the LAN messenger server."""
+    """
+    Thread-safe SQLite wrapper for the LAN messenger server.
+    """
 
     def __init__(self, path: Path = DB_PATH):
         self._path = path
@@ -116,6 +118,13 @@ class Database:
     def list_users(self) -> List[str]:
         rows = self._conn().execute("SELECT username FROM users ORDER BY username COLLATE NOCASE").fetchall()
         return [r["username"] for r in rows]
+    
+    
+    def update_password(self, username: str, salt_hex: str, hash_hex: str )-> None:
+        self._execute(
+            "UPDATE users SET password_salt = ?, password_hash = ? WHERE username = ? COLLATE NOCASE",
+            (salt_hex, hash_hex, username)
+        )
 
 
     # Message operations --------------------------------------------------------------------------

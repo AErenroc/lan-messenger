@@ -50,6 +50,7 @@ python run_client.py [--host HOST] [--port PORT] [--cert PATH] [--no-verify]
 | `/fetch` | `/inbox` | Manually pull pending messages |
 | `/users` | `/who`, `/list` | Show all users + online status |
 | `/help` | | Show help |
+| `/passwd` | | Change password |
 | `/quit` | `/exit`, `/q` | Disconnect and exit |
 
 

@@ -26,7 +26,7 @@ from server.database import Database
 from shared.protocol import (
     DEFAULT_PORT, MAX_PACKET, HEADER_SIZE, decode_header, decode_body, encode,
     MSG_REGISTER, MSG_LOGIN, MSG_LOGOUT, MSG_SEND, MSG_BROADCAST,
-    MSG_FETCH, MSG_LIST_USERS,
+    MSG_FETCH, MSG_LIST_USERS, MSG_PASSWD,
     MSG_OK, MSG_ERROR, MSG_DELIVER, MSG_USER_LIST, MSG_NOTIFY,
 )
 from shared.tls import server_ssl_context, cert_fingerprint, CERT_PATH
@@ -137,6 +137,8 @@ class ClientSession(threading.Thread):
             self._handle_fetch()
         elif t == MSG_LIST_USERS:
             self._handle_list_users()
+        elif t == MSG_PASSWD:
+            self._handle_passwd(pkt)
         else:
             self._error(f"Unknown message type: {t!r}")
 
@@ -158,7 +160,7 @@ class ClientSession(threading.Thread):
 
         if self.db.register_user(username, salt_hex, hash_hex):
             log.info("Registered new user: %s", username)
-            self._ok(f"User '{username}' registered successfully.")
+            self._ok(f"User '{username}' registered successfully.") # sends "OK" + info
         else:
             self._error(f"Username '{username}' is already taken.")
 
@@ -275,6 +277,26 @@ class ClientSession(threading.Thread):
             for u in all_users
         ]
         self.send({"type": MSG_USER_LIST, "users": users})
+
+    def _handle_passwd(self, pkt: dict):
+        if not self.username:
+            return self._error("Not logged in.")
+        
+        old_pw = pkt.get("old") or ""   # TODO: mabye change this to not default to an empty string but a specified temp password instead.
+        new_pw = pkt.get("new") or ""
+        
+        if not self.db.verify_user(self.username, old_pw):
+            log.warning("Failed /passwd attempt for user '%s' ", self.username)
+            return self._error("Current password is incorrect.")
+        if len(new_pw) < 8:
+            return self._error("Password needs to be at least 8 characters.")
+        if new_pw == old_pw:
+            return self._error("New and old passwords should be be different.")
+        
+        salt_hex, hash_hex = hash_password(new_pw)
+        self.db.update_password(self.username, salt_hex, hash_hex)
+        log.info("%s changed their password.", self.username)
+        self._ok("Password updated successfully!")
 
     # Internal helpers ------------------------------------------------------------
     def _deliver_pending(self):
