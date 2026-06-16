@@ -23,7 +23,7 @@ from shared.protocol import (
     MSG_REGISTER, MSG_LOGIN, MSG_LOGOUT, MSG_SEND, MSG_BROADCAST,
     MSG_FETCH, MSG_LIST_USERS, MSG_PASSWD,
 )
-from shared.tls import client_ssl_context
+from shared.tls import client_ssl_context, CA_CERT_PATH, CLIENT_CERT_DIR
 
 
 class Connection:
@@ -48,14 +48,16 @@ class Connection:
         LAN only).  Default is True.
     """
 
-    def __init__(self, host: str, port: int = DEFAULT_PORT, cert_path: Optional[Path] = None, verify: bool = True):
+    def __init__(self, host: str, port: int = DEFAULT_PORT, ca_cert_path: Path = None, client_cert: Path = None, client_key:    Path = None,):
         self.host = host
         self.port = port
-        self._cert_path = cert_path
-        self._verify = verify
+
+        self._ca_cert       = ca_cert_path
+        self._client_cert   = client_cert
+        self._client_key    = client_key
 
         self._sock: Optional[socket.socket] = None
-        self._send_lock = threading.Lock()                   # ensure thread-safe sending TODO: check if plan works
+        self._send_lock     = threading.Lock()                   # ensure thread-safe sending TODO: check if plan works
         self._callbacks: Dict[str, list[Callable]] = {}      
         self._disconnect_cb: Optional[Callable] = None       # special callback when connection drops
         self._recv_thread: Optional[threading.Thread] = None # background recive thread
@@ -75,8 +77,12 @@ class Connection:
   
     # Connection Lifecycle ------------------------------------------------------------
     def connect(self, timeout: float = 5.0):
-        """Connect to the server and complete the TLS handshake. Raises OSError on failure."""
-        ssl_ctx = client_ssl_context(cert_path=self._cert_path, verify=self._verify)
+        """Connect with mTLS. both sides must present and verify certs. """
+        ssl_ctx = client_ssl_context(
+            cert_path       = self._cert_path, 
+            key_path        = self._client_key,
+            ca_cert_path    = self._ca_cert,
+            )
         raw_sock = socket.create_connection((self.host, self.port), timeout=timeout)
         # Wrap with TLS
         self._sock = ssl_ctx.wrap_socket(raw_sock, server_hostname=self.host)

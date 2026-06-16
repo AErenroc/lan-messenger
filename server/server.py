@@ -29,7 +29,7 @@ from shared.protocol import (
     MSG_FETCH, MSG_LIST_USERS, MSG_PASSWD,
     MSG_OK, MSG_ERROR, MSG_DELIVER, MSG_USER_LIST, MSG_NOTIFY,
 )
-from shared.tls import server_ssl_context, cert_fingerprint, CERT_PATH
+from shared.tls import server_ssl_context, cert_fingerprint, CERT_PATH, generate_client_cert, CLIENT_CERT_DIR
 from shared.authentication import hash_password
 
 
@@ -158,11 +158,27 @@ class ClientSession(threading.Thread):
         
         salt_hex, hash_hex = hash_password(password)
 
-        if self.db.register_user(username, salt_hex, hash_hex):
-            log.info("Registered new user: %s", username)
-            self._ok(f"User '{username}' registered successfully.") # sends "OK" + info
-        else:
+        if not self.db.register_user(username, salt_hex, hash_hex):
             self._error(f"Username '{username}' is already taken.")
+
+
+
+        # Issue a client cert signed by the server's CA
+        cert_path, key_path = generate_client_cert(username)
+        cert_pem = cert_path.read_text() # safely read and close using read_text()
+        key_pem  = key_path.read_text()
+
+        log.info("Registered and issued cert for new user: %s", username)
+
+        # Send cert + key back to the client in the OK payload
+        # The client must save these - - they're required for future logins
+        self.send({
+            "type": "OK",
+            "info": f"User '{username}' registered. Save your cert and key.",
+            "cert_pem": cert_pem,
+            "key_pem":  key_pem,
+        })
+            
 
 
     def _handle_login(self, pkt: dict):
@@ -175,17 +191,37 @@ class ClientSession(threading.Thread):
         # verify_user() handles both 'user not found' and 'wrong password'
         if not self.db.verify_user(username, password):
             log.warning("Failed login attempt for '%s' from %s:%d", username, *self.addr)
-            return self._error(f"Unknown user '{username}'. Register first.")
+            return self._error(f"Invalid user '{username} or password.")
         
         if self.server.is_online(username):
             return self._error(f"'{username}' is already logged in from another client.")
+        
+
+
+
+        # Record the TLS peer cert subject TODO: ∆ secure checks (dont use CNs) use SANs and check expiry dates, etc 
+        try:
+            peer_cert = self.sock.getpeercert()
+            if peer_cert is None:
+                return self._error("Client certificate error.")
+            subject   = dict(x[0] for x in peer_cert.get("subject", []))
+            cert_cn   = subject.get("commonName", "")
+            if cert_cn.lower() != username.lower():
+                log.warning(
+                    "Cert CN '%s' does not match claimed username '%s' - - rejecting.",
+                    cert_cn, username,
+                )
+                return self._error("Certificate CN does not match username.")
+            self.db.update_cert_subject(username, str(peer_cert.get("subject")))
+        except Exception as exc:
+            log.warning("Could not read peer cert for %s: %s", username, exc)
+            return self._error("Client certificate error.")
 
         self.username = username
         self.server.add_session(username, self)
-        log.info("%s logged in from %s:%d", username, *self.addr)
+        log.info("%s logged in from %s:%d (cert CN verified)", username, *self.addr)
         self._ok(f"Welcome, {username}!")
         self.server.broadcast_notify("joined", username, exclude=username)
-        # Deliver any stored messages immediately
         self._deliver_pending()
 
 

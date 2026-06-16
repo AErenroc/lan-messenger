@@ -126,6 +126,11 @@ class Database:
             (salt_hex, hash_hex, username)
         )
 
+    def update_cert_subject(self, username: str, cert_subject: str) -> None:
+        self._execute(
+            "UPDATE users SET cert_subject = ? WHERE username = ? COLLATE NOCASE",
+            (cert_subject, username),
+    )
 
     # Message operations --------------------------------------------------------------------------
     def store_message(self, from_user: str, to_user: Optional[str], body: str) -> int:

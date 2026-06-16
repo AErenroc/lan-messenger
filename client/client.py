@@ -126,6 +126,7 @@ class MessengerClient:
             self._pending_login = None
             # self.username is left unchanged
 
+    # TODO: add a _on_login() function
 
     def _on_deliver(self, pkt: dict):
         _print_msg(
@@ -203,7 +204,7 @@ Shorthand while logged in:
     def run(self):
         # Connect
         try:
-            _print_info(f"Connecting to {self.host}:{self.port} …")
+            _print_info(f"Connecting to {self.host}:{self.port} ...")
             self.conn.connect(timeout=5.0)
             _print_ok(f"Connected! Type /help for commands.")
         except OSError as exc:

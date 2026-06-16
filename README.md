@@ -84,5 +84,4 @@ lan-messenger/
 ```bash
 pip install rich
 ```
-*test edit from mobile 
 The client auto-detects `rich` and uses coloured output, tables, and panels if available. Falls back to plain text otherwise. Not a requirement.
