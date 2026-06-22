@@ -1,6 +1,6 @@
 """
-LAN Messenger - - - mTLS Stuff
-
+MUTUAL TLS Stuff
+~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
 import hashlib

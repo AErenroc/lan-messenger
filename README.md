@@ -79,7 +79,7 @@ lan-messenger/
 
 ```
 
-## Optional: Prettier Output with `rich`
+## Optional: Colorfull output with `rich`
 
 ```bash
 pip install rich

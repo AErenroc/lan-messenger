@@ -1,6 +1,7 @@
 """
-LAN Messenger - - - Database Layer (SQLite)
-Handles storage of users and messages (store-and-forward).
+LAN Messenger - - - DATABASE LAYER (SQLite)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+    Handles storage of users and messages (store-and-forward).
 """
 
 

@@ -1,5 +1,7 @@
 """
-LAN Messenger – - - Server setup
+SERVER SETUP
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Listens for TCP connections, authenticates users, stores and forwards messages.
 
 Usage:

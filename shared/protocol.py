@@ -1,6 +1,7 @@
 """
 LAN Messenger Protocol Definitions
-All message types and packet structures shared between server and client.
+~~~~~~~~~~~~~~~~~~~~~~~~~
+    All message types and packet structures shared between server and client.
 """
 
 import json
