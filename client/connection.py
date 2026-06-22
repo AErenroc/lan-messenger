@@ -48,7 +48,7 @@ class Connection:
         LAN only).  Default is True.
     """
 
-    def __init__(self, host: str, port: int = DEFAULT_PORT, ca_cert_path: Path = None, client_cert: Path = None, client_key:    Path = None,):
+    def __init__(self, host: str, port: int = DEFAULT_PORT, ca_cert_path: Path = None, client_cert: Path = None, client_key: Path = None,):
         self.host = host
         self.port = port
 

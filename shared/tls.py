@@ -1,5 +1,5 @@
 """
-LAN Messenger - - - TLS Stuff
+LAN Messenger - - - mTLS Stuff
 
 """
 
@@ -22,8 +22,8 @@ _SERVER_DIR =  _ROOT_DIR / "server"
 _CLIENT_DIR =  _ROOT_DIR / "client"
 
 # CA and Certificate paths 
-CA_CERT_PATH =  _SERVER_DIR / "ca.crt"
-CA_KEY_PATH = _SERVER_DIR / "ca.key"
+CA_CERT_PATH =  _SERVER_DIR / "CA" / "ca.crt"
+CA_KEY_PATH = _SERVER_DIR   / "CA" / "ca.key"
 
 CERT_PATH = _SERVER_DIR / "server.crt"
 KEY_PATH  = _SERVER_DIR / "server.key"
@@ -114,8 +114,8 @@ def _build_san_config(host_addr: str, cn: str) -> str:
     try:
         hostname = socket.gethostbyaddr(host_addr)[0] 
     except Exception:
-        log.info("No reverse DNS record for %s, setting default as 'lanmsg-server", host_addr)
-        hostname = "lanmsg-server"
+        log.info("No reverse DNS record for %s, setting default as 'lanmsg-SERVER", host_addr)
+        hostname = "lanmsg-SERVER"
 
     return f"""
     [req]
@@ -171,9 +171,11 @@ def generate_server_cert(
     ca_cert_path: Path = CA_CERT_PATH,
     ca_key_path:  Path = CA_KEY_PATH,
     days:         int  = _CERT_DAYS,
-    cn:           str  = "lanmsg-server",
+    cn:           str  = "lanmsg-SERVER",
 ) -> None:
     """
+    Creates the OpenSSL configuration file used to generate the CSR.
+
     Generate the server's key+CSR, then sign it with the CA.
     Called by server_ssl_context() automatically when needed. 
     """
@@ -195,6 +197,27 @@ def generate_server_cert(
             "keyUsage=digitalSignature,keyEncipherment\n"
             "extendedKeyUsage=serverAuth\n".format(host_addr)
         )
+        # Generate key + CSR
+        _run_openssl(
+            "req", "-newkey", "rsa:2048",
+            "-keyout", str(key_path),
+            "-out",    str(csr_path),
+            "-nodes",
+            "-config", str(cnf_path),
+        )
+        # Sign with CA, carrying over the SANs
+        _sign_cert(
+            csr_path, cert_path,
+            ca_cert_path, ca_key_path,
+            days,
+            extra_openssl_args=["-extfile", str(ext_path), "-extensions", "v3_req"],
+        )
+
+    os.chmod(key_path, 0o600)
+    log.info("Server cert : %s", cert_path)
+    log.info("Server key  : %s", key_path)
+
+    
 
 
 def generate_client_cert(
@@ -257,11 +280,11 @@ def cert_fingerprint(cert_path: Path = CERT_PATH) -> str:
     digest = hashlib.sha256(der).hexdigest().upper()
     return ":".join(digest[i:i+2] for i in range(0, len(digest), 2))
 
-
+# def srver_ssl_context(host_addr: str = "127.0.0.1", cert_path: Path = CERT_PATH, key_path: Path  = KEY_PATH,) -> ssl.SSLContext:
 # SSL Context Factories ------------------------------------------------------------------ 
 def server_ssl_context(
     host_addr:    str  = "127.0.0.1",
-    cert_path:    Path = CERT_PATH,
+    cert_path:    Path = CERT_PATH, #_SERVER_DIR / "server.crt"
     key_path:     Path = KEY_PATH,
     ca_cert_path: Path = CA_CERT_PATH,
     ca_key_path:  Path = CA_KEY_PATH,

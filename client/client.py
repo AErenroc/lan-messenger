@@ -11,6 +11,7 @@ If 'rich' is not installed, falls back to plain text.
 import argparse
 import queue
 import sys
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -90,10 +91,10 @@ def _print_notify(event: str, username: str):
 
 # Main client class ------------------------------------------------
 class MessengerClient:
-    def __init__(self, host: str, port: int, cert_path=None, verify: bool = True):
+    def __init__(self, host: str, port: int, ca_cert_path: Path, client_cert: Path, client_key: Path):
         self.host = host
         self.port = port
-        self.conn = Connection(host, port, cert_path=cert_path, verify=verify)
+        self.conn = Connection(host, port, ca_cert_path=ca_cert_path, client_cert=client_cert, client_key=client_key)
         self.username: Optional[str] = None
         self._pending_login: Optional[str] = None
         self._running = True
@@ -113,10 +114,15 @@ class MessengerClient:
         if pkt.get("info"):
             _print_ok(pkt["info"])
 
+        # Server sends cert+key payload after successful registration.  #TODO: on_ok, this is sloppy/unsecure - fix once other logic is added
+        if "cert_pem" in pkt and "key_pem" in pkt:
+            self._save_client_cert(pkt["cert_pem"], pkt["key_pem"])
+
         # Promote the pending login to confirmed only when server says OK
         if self._pending_login is not None:
             self.username = self._pending_login
             self._pending_login = None
+
 
     def _on_error(self, pkt: dict):
         _print_error(pkt.get("info", "Unknown error"))
@@ -161,6 +167,21 @@ class MessengerClient:
             _print_error("Connection to server lost.")
             self._running = False
 
+    # Helpers ------------------------------------------------------------------
+    def _save_client_cert(self, cert_pem: str, key_pem: str):
+        """
+        Persist the CA-signed cert and key the server just issued.
+        """
+        from shared.tls import CLIENT_CERT_DIR
+        CLIENT_CERT_DIR.mkdir(parents=True, exist_ok=True)
+        cert_path = CLIENT_CERT_DIR / f"{self.username}.crt"
+        key_path  = CLIENT_CERT_DIR / f"{self.username}.key"
+        cert_path.write_text(cert_pem)
+        key_path.write_text(key_pem)
+        os.chmod(key_path, 0o600) # so only owner can read/write file
+        _print_ok(f"Cert saved to {cert_path}")
+        _print_ok(f"Key  saved to {key_path}")
+        _print_info("Please use --cert and --key with these paths on future logins.")
   
     # Help display banner ------------------------------------------------------------------
     def _print_banner(self):
@@ -322,24 +343,22 @@ def main():
     parser.add_argument("--host", default="127.0.0.1", help="Server IP address")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Server port (default: {DEFAULT_PORT})")
 
-    tls_group = parser.add_argument_group("TLS / encryption")
-    tls_group.add_argument(
-        "--cert", default=None, metavar="PATH",
-        help="Path to server's PEM certificate for pinned verification "
-             "(e.g. server/server.crt). Recommended for security.",
-    )
+    tls_group = parser.add_argument_group("mTLS")
 
-    tls_group.add_argument(
-        "--no-verify", action="store_true",
-        help="Skip TLS certificate verification (NOT recommended; for testing only).",
-    )
+    tls_group.add_argument("--ca",   required=True, metavar="PATH", help="Path to CA cert (ca.crt)")
+    tls_group.add_argument("--cert", default=None,  metavar="PATH", help="Your client cert (<username>.crt)")
+    tls_group.add_argument("--key",  default=None,  metavar="PATH", help="Your client key  (<username>.key)")
 
+   
     args = parser.parse_args()
 
-    cert_path = Path(args.cert) if args.cert else None
-    verify    = not args.no_verify
-
-    client = MessengerClient(args.host, args.port, cert_path=cert_path, verify=verify)
+    client = MessengerClient(
+        host        = args.host,
+        port        = args.port,
+        ca_cert     = Path(args.ca),
+        client_cert = Path(args.cert) if args.cert else None,
+        client_key  = Path(args.key)  if args.key  else None,
+    )
     client.run()
 
 

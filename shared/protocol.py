@@ -28,7 +28,8 @@ MSG_LIST_USERS  = "LIST_USERS"  # {"type": "LIST_USERS"}
 MSG_PASSWD      = "PASSWD"      # {"type": "PASSWD", "old": str, "new" : str}
 
 # --- Message Types (server --> client) ---
-MSG_OK          = "OK"          # {"type": "OK",         "info": str}
+MSG_OK          = "OK"          # {"type": "OK",         "info": str} #TODO: update based on changes to _on_ok, mabye create more message types
+
 MSG_ERROR       = "ERROR"       # {"type": "ERROR",      "info": str}
 MSG_DELIVER     = "DELIVER"     # {"type": "DELIVER",    "id": int, "from": str, "body": str, "sent_at": str, "broadcast": bool}
 MSG_USER_LIST   = "USER_LIST"   # {"type": "USER_LIST",  "users": [{"username": str, "online": bool}]}

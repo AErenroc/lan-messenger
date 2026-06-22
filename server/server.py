@@ -172,6 +172,7 @@ class ClientSession(threading.Thread):
 
         # Send cert + key back to the client in the OK payload
         # The client must save these - - they're required for future logins
+        # TODO: create new message type/handler or other way of making more organized
         self.send({
             "type": "OK",
             "info": f"User '{username}' registered. Save your cert and key.",
@@ -197,9 +198,11 @@ class ClientSession(threading.Thread):
             return self._error(f"'{username}' is already logged in from another client.")
         
 
+        
 
 
-        # Record the TLS peer cert subject TODO: ∆ secure checks (dont use CNs) use SANs and check expiry dates, etc 
+
+        # Record the TLS peer cert subject TODO: ∆ secure checks (dont use CNs) use SANs, dont use cert subject and check expiry dates, etc 
         try:
             peer_cert = self.sock.getpeercert()
             if peer_cert is None:
@@ -207,11 +210,9 @@ class ClientSession(threading.Thread):
             subject   = dict(x[0] for x in peer_cert.get("subject", []))
             cert_cn   = subject.get("commonName", "")
             if cert_cn.lower() != username.lower():
-                log.warning(
-                    "Cert CN '%s' does not match claimed username '%s' - - rejecting.",
-                    cert_cn, username,
-                )
+                log.warning("Cert CN '%s' does not match claimed username '%s' - - rejecting.", cert_cn, username, )
                 return self._error("Certificate CN does not match username.")
+            
             self.db.update_cert_subject(username, str(peer_cert.get("subject")))
         except Exception as exc:
             log.warning("Could not read peer cert for %s: %s", username, exc)
@@ -422,8 +423,15 @@ class Server:
                  stats["total_users"], stats["total_messages"], stats["pending_messages"])
         
         # Set up TLS
-        print("\n\t Set up TLS CALLING --> ssl_ctx = server_ssl_context(self.host)\n")
-        ssl_ctx = server_ssl_context(self.host)
+        print("\n\t Set up mTLS CALLING --> ssl_ctx = server_ssl_context(...)\n")
+        ssl_ctx = server_ssl_context(
+             host_addr = self.host      # uses defaults defined in tls.py when called
+        )
+        """host_addr:    str  = "127.0.0.1",
+    cert_path:    Path = CERT_PATH,
+    key_path:     Path = KEY_PATH,
+    ca_cert_path: Path = CA_CERT_PATH,
+    ca_key_path:  Path = CA_KEY_PATH,"""
         log.info("TLS enabled  (%s)", ssl_ctx.protocol.name if hasattr(ssl_ctx.protocol, 'name') else 'TLS')
         log.info("Cert fingerprint (SHA-256): %s", cert_fingerprint(CERT_PATH))
         log.info("Share server/server.crt with clients for certificate pinning.")
