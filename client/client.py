@@ -114,10 +114,6 @@ class MessengerClient:
         if pkt.get("info"):
             _print_ok(pkt["info"])
 
-        # Server sends cert+key payload after successful registration.  #TODO: on_ok, this is sloppy/unsecure - fix once other logic is added
-        if "cert_pem" in pkt and "key_pem" in pkt:
-            self._save_client_cert(pkt["cert_pem"], pkt["key_pem"])
-
         # Promote the pending login to confirmed only when server says OK
         if self._pending_login is not None:
             self.username = self._pending_login
@@ -198,10 +194,11 @@ class MessengerClient:
             print("=" * 40)
 
     def _print_help(self):
+        # REMOVED /register <name>        Register a new username
         help_text = """
 Commands:
-  /register <name>        Register a new username
-  /login <name>           Log in as an existing user
+
+  /login <name>           Log in as an existing user (request to be provisioned by admin)
   /passwd                 Change your password (must be loged in)
   /logout                 Log out (stay connected)
   /msg <user> <text>      Send a direct message
@@ -269,18 +266,18 @@ Shorthand while logged in:
 
         if cmd == "help":                                   # HELP 
             self._print_help()
-        elif cmd == "register":                             # REGISTER - - - - - - - - - - - - 
-            if len(parts) < 2:
-                _print_error("Usage: /register <username>")
-            else:
-                password = getpass.getpass("Choose a password: ")
-                confirm  = getpass.getpass("Confirm password:  ")
-                if password != confirm:
-                    _print_error("Passwords do not match!")
-                elif len(password) < 8:
-                    _print_error("Password must be at least 8 characters")
-                else:
-                    self.conn.register(parts[1], password)
+        # elif cmd == "register":                             # REGISTER - - - - - - - - - - - - 
+        #     if len(parts) < 2:
+        #         _print_error("Usage: /register <username>")
+        #     else:
+        #         password = getpass.getpass("Choose a password: ")
+        #         confirm  = getpass.getpass("Confirm password:  ")
+        #         if password != confirm:
+        #             _print_error("Passwords do not match!")
+        #         elif len(password) < 8:
+        #             _print_error("Password must be at least 8 characters")
+        #         else:
+        #             self.conn.register(parts[1], password)
         elif cmd == "login":                                # LOGIN - - - - - - - - - - - - - -
             if len(parts) < 2:
                 _print_error("Usage: /login <username>")
@@ -345,7 +342,10 @@ def main():
 
     tls_group = parser.add_argument_group("mTLS")
 
+    # ca required
     tls_group.add_argument("--ca",   required=True, metavar="PATH", help="Path to CA cert (ca.crt)")
+
+    # client cert and key not required TODO: find a secure way of registering or change to required
     tls_group.add_argument("--cert", default=None,  metavar="PATH", help="Your client cert (<username>.crt)")
     tls_group.add_argument("--key",  default=None,  metavar="PATH", help="Your client key  (<username>.key)")
 
@@ -355,7 +355,7 @@ def main():
     client = MessengerClient(
         host        = args.host,
         port        = args.port,
-        ca_cert     = Path(args.ca),
+        ca_cert_path     = Path(args.ca),
         client_cert = Path(args.cert) if args.cert else None,
         client_key  = Path(args.key)  if args.key  else None,
     )

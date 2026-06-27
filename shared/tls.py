@@ -219,7 +219,7 @@ def generate_server_cert(
 
     
 
-
+# Called by server/provision_user.py
 def generate_client_cert(
     username:     str,
     cert_dir:     Path = CLIENT_CERT_DIR,
@@ -252,7 +252,7 @@ def generate_client_cert(
             f"subjectAltName  = email:{username}@lanmsg.local\n"
         )
 
-        # Key + CSR — CN is the username so it's visible in server logs
+        # Key + CSR - CN is the username so it's visible in server logs
         _run_openssl(
             "req", "-newkey", "rsa:2048",
             "-keyout", str(key_path),

@@ -19,7 +19,7 @@ MAX_PACKET = 65536  # 64KB
 DEFAULT_PORT = 54321
 
 # --- Message Types (client --> server) ---
-MSG_REGISTER    = "REGISTER"    # {"type": "REGISTER",   "username": str}
+#MSG_REGISTER    = "REGISTER"    # {"type": "REGISTER",   "username": str}
 MSG_LOGIN       = "LOGIN"       # {"type": "LOGIN",      "username": str}
 MSG_LOGOUT      = "LOGOUT"      # {"type": "LOGOUT"}
 MSG_SEND        = "SEND"        # {"type": "SEND",       "to": str, "body": str}

@@ -20,7 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from shared.protocol import (
     DEFAULT_PORT, MAX_PACKET, HEADER_SIZE, decode_header, decode_body, encode,
-    MSG_REGISTER, MSG_LOGIN, MSG_LOGOUT, MSG_SEND, MSG_BROADCAST,
+    #MSG_REGISTER, 
+    MSG_LOGIN, MSG_LOGOUT, MSG_SEND, MSG_BROADCAST,
     MSG_FETCH, MSG_LIST_USERS, MSG_PASSWD,
 )
 from shared.tls import client_ssl_context, CA_CERT_PATH, CLIENT_CERT_DIR
@@ -79,7 +80,7 @@ class Connection:
     def connect(self, timeout: float = 5.0):
         """Connect with mTLS. both sides must present and verify certs. """
         ssl_ctx = client_ssl_context(
-            cert_path       = self._cert_path, 
+            cert_path       = self._client_cert, 
             key_path        = self._client_key,
             ca_cert_path    = self._ca_cert,
             )
@@ -112,8 +113,8 @@ class Connection:
                 raise OSError("Not connected")
             self._sock.sendall(encode(payload))     # continues to transmit data to server until entire buffer sent or error occures
 
-    def register(self, username: str, password: str):
-        self._send({"type": MSG_REGISTER, "username": username, "password": password})
+    # def register(self, username: str, password: str):
+    #     self._send({"type": MSG_REGISTER, "username": username, "password": password})
 
     def login(self, username: str, password: str):
         self._send({"type": MSG_LOGIN, "username": username, "password": password})

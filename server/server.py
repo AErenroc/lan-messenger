@@ -2,7 +2,7 @@
 SERVER SETUP
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Listens for TCP connections, authenticates users, stores and forwards messages.
+Listens for connections, authenticates users, stores and forwards messages.
 
 Usage:
     python server.py [--host 0.0.0.0] [--port 54321]
@@ -27,11 +27,12 @@ from server.database import Database
 
 from shared.protocol import (
     DEFAULT_PORT, MAX_PACKET, HEADER_SIZE, decode_header, decode_body, encode,
-    MSG_REGISTER, MSG_LOGIN, MSG_LOGOUT, MSG_SEND, MSG_BROADCAST,
+    #MSG_REGISTER,
+    MSG_LOGIN, MSG_LOGOUT, MSG_SEND, MSG_BROADCAST,
     MSG_FETCH, MSG_LIST_USERS, MSG_PASSWD,
     MSG_OK, MSG_ERROR, MSG_DELIVER, MSG_USER_LIST, MSG_NOTIFY,
 )
-from shared.tls import server_ssl_context, cert_fingerprint, CERT_PATH, generate_client_cert, CLIENT_CERT_DIR
+from shared.tls import server_ssl_context, cert_fingerprint, CERT_PATH 
 from shared.authentication import hash_password
 
 
@@ -125,9 +126,9 @@ class ClientSession(threading.Thread):
     # Dispatch -----------------------------------------------------------------
     def _handle(self, pkt: dict):
         t = pkt.get("type")
-        if t == MSG_REGISTER:
-            self._handle_register(pkt)
-        elif t == MSG_LOGIN:
+        #if t == MSG_REGISTER:      # registration is intentionally disabled and users must be provisioned via provision_user.py
+        #    self._handle_register(pkt)
+        if t == MSG_LOGIN:
             self._handle_login(pkt)
         elif t == MSG_LOGOUT:
             self._handle_logout()
@@ -147,40 +148,38 @@ class ClientSession(threading.Thread):
   
 
     # Handlers ---------------------------------------------------------------
-    def _handle_register(self, pkt: dict):
-        username = (pkt.get("username") or "").strip()
-        password = pkt.get("password") or ""
+    # def _handle_register(self, pkt: dict):
+    #     username = (pkt.get("username") or "").strip()
+    #     password = pkt.get("password") or ""
 
-        if not username or len(username) > 32:
-            return self._error("Username must be 1-32 characters.")
-        if not username.replace("_", "").replace("-", "").isalnum():
-            return self._error("Username may only contain letters, digits, - and _.")
-        if len(password) < 8:   # TODO: let modify min password length for connecting clients on startup
-            return self._error("Password must be at least 8 characters.")
+    #     if not username or len(username) > 32:
+    #         return self._error("Username must be 1-32 characters.")
+    #     if not username.replace("_", "").replace("-", "").isalnum():
+    #         return self._error("Username may only contain letters, digits, - and _.")
+    #     if len(password) < 8:   # TODO: let modify min password length for connecting clients on startup
+    #         return self._error("Password must be at least 8 characters.")
         
-        salt_hex, hash_hex = hash_password(password)
+    #     salt_hex, hash_hex = hash_password(password)
 
-        if not self.db.register_user(username, salt_hex, hash_hex):
-            self._error(f"Username '{username}' is already taken.")
+    #     if not self.db.register_user(username, salt_hex, hash_hex):
+    #         self._error(f"Username '{username}' is already taken.")
 
 
+    #     # Issue a client cert signed by the server's CA
+    #     cert_path, key_path = generate_client_cert(username)
+    #     cert_pem = cert_path.read_text() # safely read and close using read_text()
+    #     key_pem  = key_path.read_text()
 
-        # Issue a client cert signed by the server's CA
-        cert_path, key_path = generate_client_cert(username)
-        cert_pem = cert_path.read_text() # safely read and close using read_text()
-        key_pem  = key_path.read_text()
+    #     log.info("Registered and issued cert for new user: %s", username)
 
-        log.info("Registered and issued cert for new user: %s", username)
-
-        # Send cert + key back to the client in the OK payload
-        # The client must save these - - they're required for future logins
-        # TODO: create new message type/handler or other way of making more organized
-        self.send({
-            "type": "OK",
-            "info": f"User '{username}' registered. Save your cert and key.",
-            "cert_pem": cert_pem,
-            "key_pem":  key_pem,
-        })
+    #     # The client must save these - - they're required for future logins
+    #     # TODO: This is bad and unsecure(sends in plain text), just using it for now while I figure out other stuff (rqst CSR functionality maybe?) 
+    #     self.send({
+    #         "type": "OK",
+    #         "info": f"User '{username}' registered. Save your cert and key.",
+    #         "cert_pem": cert_pem,
+    #         "key_pem":  key_pem,
+    #     })
             
 
 
@@ -199,9 +198,6 @@ class ClientSession(threading.Thread):
         if self.server.is_online(username):
             return self._error(f"'{username}' is already logged in from another client.")
         
-
-        
-
 
 
         # Record the TLS peer cert subject TODO: ∆ secure checks (dont use CNs) use SANs, dont use cert subject and check expiry dates, etc 
@@ -226,6 +222,7 @@ class ClientSession(threading.Thread):
         self._ok(f"Welcome, {username}!")
         self.server.broadcast_notify("joined", username, exclude=username)
         self._deliver_pending()
+
 
 
     def _handle_logout(self):

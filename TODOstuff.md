@@ -1,8 +1,9 @@
 TODO:
 
-- ADDED authentication, password hashing etc DONE
+- [ADDED] authentication, password hashing etc DONE
         -- NEED TO CREATE TESTS FOR
-- ADDED password changing
+- [ADDED] password changing
+
 
 - add mutual TLS, temp CA
         - add Extended Key Usage for mutualTLS , restrict what certs can be used for
