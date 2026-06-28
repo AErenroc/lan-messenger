@@ -72,9 +72,24 @@ def provision_user(
     shutil.copy2(CA_CERT_PATH, bundle_dir / "ca.crt")
     shutil.copy2(cert_path,    bundle_dir / f"{username}.crt")
     shutil.copy2(key_path,     bundle_dir / f"{username}.key")
-
     # Protect the private key in the bundle too
     os.chmod(bundle_dir / f"{username}.key", 0o600)
+
+
+    # TODO: RUN TESTS
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes
+
+    cert_der = cert_path.read_bytes() # PEM data
+    # PEM to DER conversion since provision writes PEM files
+    from ssl import PEM_cert_to_DER_cert
+    der = PEM_cert_to_DER_cert(cert_der.decode())
+    parsed = x509.load_der_x509_certificate(der, default_backend())
+    fingerprint = parsed.fingerprint(hashes.SHA256()).hex()
+    
+    db.update_cert_fingerprint(username, fingerprint)
+
 
     # Add quick connect helper script + README --------------------------
     _write_connect_sh(bundle_dir, username, server_host, server_port)

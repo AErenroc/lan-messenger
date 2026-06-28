@@ -10,9 +10,8 @@ server.key
 # misc
 __pycache__
 .DS_Store
+TODOstuff.md
 
-# todo remove once CA + cert gen is added to tls.py
-scripts
 
 #ignore contents of dirs
 client/certs/*

@@ -272,7 +272,7 @@ def generate_client_cert(
     return cert_path, key_path
 
 
-# Certificate fingerprint --------------------------------- TODO: remove later (found dif solution)
+# Certificate fingerprint --------------------------------- TODO: remove later (found dif solution (cryptography lib - DER))
 def cert_fingerprint(cert_path: Path = CERT_PATH) -> str:
     """SHA-256 fingerprint of a PEM cert, colon-separated hex."""
     pem = cert_path.read_bytes()

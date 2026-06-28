@@ -66,7 +66,7 @@ class Database:
                 username        TEXT    NOT NULL UNIQUE COLLATE NOCASE,
                 password_salt   TEXT    NOT NULL,
                 password_hash   TEXT    NOT NULL,
-                cert_subject    TEXT,
+                cert_fingerprint TEXT   NOT NULL,
                 created_at      TEXT    NOT NULL DEFAULT (datetime('now','utc'))
             );
 
@@ -132,6 +132,20 @@ class Database:
             "UPDATE users SET cert_subject = ? WHERE username = ? COLLATE NOCASE",
             (cert_subject, username),
     )
+        
+    def update_cert_fingerprint(self, username: str, fingerprint: str) -> None:
+        self._execute(
+            "UPDATE users SET cert_fingerprint = ? WHERE username = ? COLLATE NOCASE",
+            (fingerprint, username),
+        )
+
+    def get_cert_fingerprint(self, username: str) -> Optional[str]:
+        row = self._conn().execute(
+            "SELECT cert_fingerprint FROM users WHERE username = ? COLLATE NOCASE",
+            (username),
+        ).fetchone()
+        return row["cert_fingerprint"] if row else None
+    
 
     # Message operations --------------------------------------------------------------------------
     def store_message(self, from_user: str, to_user: Optional[str], body: str) -> int:

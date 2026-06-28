@@ -202,23 +202,50 @@ class ClientSession(threading.Thread):
 
         # Record the TLS peer cert subject TODO: ∆ secure checks (dont use CNs) use SANs, dont use cert subject and check expiry dates, etc 
         try:
-            peer_cert = self.sock.getpeercert()
-            if peer_cert is None:
-                return self._error("Client certificate error.")
-            subject   = dict(x[0] for x in peer_cert.get("subject", []))
-            cert_cn   = subject.get("commonName", "")
-            if cert_cn.lower() != username.lower():
-                log.warning("Cert CN '%s' does not match claimed username '%s' - - rejecting.", cert_cn, username, )
+            from cryptography import x509
+            from cryptography.hazmat.backends import default_backend
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.x509.oid import NameOID
+            import datetime
+
+            der = self.sock.getpeercert(binary_form=True)   # retrieves the certificate (der) of the other side of the connection
+            if der is None:
+                return self._error("No client certificate presented.")
+
+            cert = x509.load_der_x509_certificate(der, default_backend())
+
+
+            # Check Expiry (ssl handshake also checks this, but better safe then sorry)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if now > cert.not_valid_after_utc:
+                log.warning("Expired cert presented by '%s'", username)
+                return self._error("Your certificate has expired.")
+            
+            # CN must match claimed username
+            cn_attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+            if not cn_attrs or cn_attrs[0].value.lower() != username.lower():
+                log.warning("Cert CN mismatch for '%s'", username)
                 return self._error("Certificate CN does not match username.")
             
-            self.db.update_cert_subject(username, str(peer_cert.get("subject")))
+             # Fingerprint must match what was stored at provision time - - - - - - - - - (the important part)
+            presented_fp = cert.fingerprint(hashes.SHA256()).hex()
+            stored_fp = self.db.get_cert_fingerprint(username)
+            if stored_fp and presented_fp != stored_fp:
+                log.warning("[!!!] Cert fingerprint mismatch for '%s'", username)
+                return self._error("Certificate does not match registered identity.")
+            
+            # Store fingerprint if not yet recorded (first login)
+            if not stored_fp:
+                self.db.update_cert_fingerprint(username, presented_fp)
+
         except Exception as exc:
-            log.warning("Could not read peer cert for %s: %s", username, exc)
+            log.warning("Cert validation error for %s: %s", username, exc)
             return self._error("Client certificate error.")
+
 
         self.username = username
         self.server.add_session(username, self)
-        log.info("%s logged in from %s:%d (cert CN verified)", username, *self.addr)
+        log.info("%s logged in from %s:%d", username, *self.addr)
         self._ok(f"Welcome, {username}!")
         self.server.broadcast_notify("joined", username, exclude=username)
         self._deliver_pending()
