@@ -3,21 +3,25 @@
 A terminal LAN messaging application written in Python. Supports direct messages, broadcasts and store-and-forward delivery for offline users. Connections are secured with mutual TLS. Both the server and every client must present a certificate signed by the server's CA before any data can be exchanged.
 
 ## Table of Contents
-- [Requirements](#requirements)
-- [Project Structure](#project-structure)
-- [Features](#features)
-- [-- Setup --](#setup)
-- [Application Commands](#application-commands)
+- [General Information](#general-information)
+  - [Requirements](#requirements)
+  - [Project Structure](#project-structure)
+  - [Features](#features)
+  - [-- Setup --](#setup)
+  - [Application Commands](#application-commands)
 - [Innerworkings](#innerworkings)
-  - [On Server Startup](#on-server-startup)
-  - [How users are added](#how-users-are-added)
-    - [What the server stores per user](#what-the-server-stores-per-user)
-  - [Connecting as a client](#connecting-as-a-client)
-    - [Password storage](#password-storage)
-    - [Message delivery](#message-delivery)
-  - [Mutual TLS](#mutual-tls)
-    - [Certificate verification at login](#certificate-verification-at-login)
+    - [On Server Startup](#on-server-startup)
+    - [How users are added](#how-users-are-added)
+      - [What the server stores per user](#what-the-server-stores-per-user)
+    - [Connecting as a client](#connecting-as-a-client)
+      - [Password storage](#password-storage)
+      - [Message delivery](#message-delivery)
+    - [Mutual TLS](#mutual-tls)
+      - [Certificate verification at login](#certificate-verification-at-login)
   
+# General Information
+---
+
 
 ## Requirements
 
@@ -165,9 +169,7 @@ Once connected to the server you can use the commands below.
 | `/quit` | `/exit`, `/q` | Disconnect and exit |
 
 
----
----
----
+
 
 
 
@@ -180,6 +182,7 @@ Once connected to the server you can use the commands below.
 
 
 # Innerworkings 
+---
 [***Back to Table of Contents***](#table-of-contents)
 
 More thorough information on how the application works. 
@@ -222,7 +225,6 @@ All users must be provisioned by an administrator directly on the server machine
 | `password_salt` | 32-byte random salt (hex) |
 | `password_hash` | PBKDF2 digest (hex) |
 | `cert_fingerprint` | SHA-256 fingerprint of the issued client cert (hex) |
-| `cert_subject` | Full Subject string from the last verified login |
 | `created_at` | UTC timestamp |
 
 ## Connecting as a client
@@ -253,7 +255,6 @@ Passwords are hashed with PBKDF2-HMAC-SHA256 using a 32-byte random salt and 200
 
 Messages are stored in SQLite immediately on receipt. If the recipient is online, the server attempts live delivery and marks the message as delivered. If the recipient is offline, the message remains pending and is delivered automatically when they next log in, or can be retrieved manually with `/fetch`.
 
-Broadcasts follow the same pattern.
 
 ## Mutual TLS
 
@@ -269,11 +270,11 @@ TLS 1.2 is the minimum version enforced.
 
 The mTLS handshake authenticates the certificate. On top of that, `_handle_login` performs three additional checks using the `cryptography` library on the raw DER-encoded certificate:
 
-1. **Expiry** - the certificate's `notAfter` field is checked against the current UTC time. The TLS handshake also enforces this, but it is checked explicitly as a defence-in-depth measure.
+1. **Expiry** - the certificate's `notAfter` field is checked against the current UTC time. The TLS handshake also enforces this, but it is checked explicitly (defence-in-depth).
 2. **CN match** - the Common Name in the certificate Subject must match the username supplied in the login packet.
-3. **Fingerprint match** - the SHA-256 fingerprint of the presented certificate is compared against the fingerprint stored in the database at provisioning time. This binds each login to the exact certificate that was issued, so a different CA-signed certificate for the same CN is rejected.
 
-On the very first login after provisioning (before a fingerprint has been stored), the fingerprint is recorded from the presented certificate and enforced on all subsequent logins.
+3. **Fingerprint match** - the SHA-256 fingerprint of the presented certificate is compared against the fingerprint stored in the database at provisioning time. *This binds each login to the exact certificate that was issued, so a different CA-signed certificate for the same CN is rejected*.
+
 
 
 
